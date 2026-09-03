@@ -1,7 +1,7 @@
 import type { ApiEnvelope, ApiErrorShape } from '@/types/api';
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:5000/api/v1';
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'https://eduvault-backend-sigma.vercel.app/api/v1';
 
 /**
  * Thrown for every non-2xx response. `status` lets callers branch on
