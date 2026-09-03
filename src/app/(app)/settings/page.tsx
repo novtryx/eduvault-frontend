@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Calendar, CreditCard, Plus } from 'lucide-react';
+import { Calendar, CreditCard, Plus, ScrollText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -16,6 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Pagination } from '@/components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/features/auth/auth-context';
@@ -35,9 +38,11 @@ import {
   type SchoolInfoFormValues,
 } from '@/features/schools/schemas';
 import { useSubscription } from '@/features/subscriptions/hooks';
+import { PlanPicker } from '@/features/subscriptions/plan-picker';
+import { useAuditLogs } from '@/features/audit/hooks';
 import { ApiError } from '@/lib/api-client';
 import { hasPermission } from '@/lib/permissions';
-import { formatDate } from '@/lib/format-date';
+import { formatDate, formatDateTime } from '@/lib/format-date';
 import { formatKobo } from '@/lib/currency';
 import type { School } from '@/types/entities';
 
@@ -65,6 +70,7 @@ export default function SettingsPage() {
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
           <TabsTrigger value="academic">Academic Sessions</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
+          <TabsTrigger value="audit">Audit Log</TabsTrigger>
         </TabsList>
 
         <TabsContent value="school">
@@ -81,6 +87,10 @@ export default function SettingsPage() {
 
         <TabsContent value="subscription">
           <SubscriptionTab schoolId={currentSchoolId} canManage={canManageBilling} />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AuditLogTab schoolId={currentSchoolId} canView={hasPermission('audit:view', { isOwner, permissionKeys })} />
         </TabsContent>
       </Tabs>
     </div>
@@ -471,17 +481,10 @@ function AcademicSessionsTab({ schoolId, canManage }: { schoolId: string | null;
 
 // ── Subscription ────────────────────────────────────────────────────
 //
-// The backend only exposes GET/POST .../subscription (current status +
-// initialize-with-a-known-planId) — there is no endpoint to LIST
-// available plans anywhere in this backend. That makes a real
-// "compare plans and upgrade" screen impossible to build honestly right
-// now: doing so would mean hardcoding plan names/prices/IDs in the
-// frontend, which would silently drift from whatever the backend's
-// `plans` table actually contains. So this tab shows the school's real,
-// current subscription (which IS fully backend-driven) and explains
-// plainly that plan changes aren't self-serve in-app yet, instead of
-// faking a picker. Once a GET /plans (or similar) endpoint exists, this
-// is the only tab that needs to change.
+// GET /plans is now public and backend-fixed to return real pricing
+// data, so this tab shows a genuine plan picker (see PlanPicker) below
+// the current-subscription summary — Owners can subscribe or upgrade
+// directly, redirected to Paystack checkout and back via /billing/callback.
 
 function SubscriptionTab({ schoolId, canManage }: { schoolId: string | null; canManage: boolean }) {
   const subscriptionQuery = useSubscription(schoolId);
@@ -513,60 +516,212 @@ function SubscriptionTab({ schoolId, canManage }: { schoolId: string | null; can
   const hasPlan = Boolean(subscription.plan);
 
   return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
+            <CardTitle>Subscription</CardTitle>
+            <p className="mt-1 text-[13px] text-navy-400">Your school's current billing plan and status.</p>
+          </div>
+          <SubscriptionStatusBadge status={subscription.status} />
+        </CardHeader>
+        <CardContent>
+          {hasPlan && subscription.plan ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-[12px] text-navy-400">Plan</p>
+                  <p className="mt-1 text-[15px] font-semibold text-navy-900">{subscription.plan.name}</p>
+                </div>
+                <div>
+                  <p className="text-[12px] text-navy-400">Price</p>
+                  <p className="mt-1 text-[15px] font-semibold text-navy-900">
+                    {formatKobo(subscription.plan.priceKobo)}
+                    <span className="text-[12px] font-normal text-navy-400">
+                      {' '}
+                      / {subscription.plan.billingCycle === 'ANNUAL' ? 'year' : 'month'}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[12px] text-navy-400">Renews</p>
+                  <p className="mt-1 text-[15px] font-semibold text-navy-900">
+                    {subscription.cancelAtPeriodEnd ? 'Not renewing' : formatDate(subscription.currentPeriodEnd)}
+                  </p>
+                </div>
+              </div>
+              {subscription.status === 'PAST_DUE' && (
+                <p className="rounded-md bg-warning-bg px-3 py-2 text-[13px] text-warning">
+                  Your last payment didn't go through. Please update your payment method to avoid interruption.
+                </p>
+              )}
+              {subscription.cancelAtPeriodEnd && (
+                <p className="rounded-md bg-info-bg px-3 py-2 text-[13px] text-info">
+                  Your subscription is set to end on {formatDate(subscription.currentPeriodEnd)} and won't renew.
+                </p>
+              )}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<CreditCard className="h-5 w-5" />}
+              title={subscription.status === 'TRIALING' ? "You're on a trial" : 'No active plan'}
+              description={
+                canManage
+                  ? 'Choose a plan below to get started.'
+                  : 'Ask a school owner to choose a plan for your school.'
+              }
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{hasPlan ? 'Change plan' : 'Choose a plan'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PlanPicker schoolId={schoolId} currentPlanId={subscription.planId} />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── Audit Log ────────────────────────────────────────────────────────
+//
+// Read-only — GET /schools/:schoolId/audit-logs, gated behind its own
+// audit:view permission (deliberately separate from settings:view /
+// reports:view — see AuditController's own comment on why this is a
+// more sensitive, security-adjacent view a school might not want to
+// hand a bookkeeper along with reporting access).
+
+const ENTITY_TYPE_OPTIONS = [
+  'Payment',
+  'Role',
+  'FeeStructure',
+  'Student',
+  'StaffInvite',
+  'UserSchoolRole',
+  'Subscription',
+];
+
+function humanizeAction(action: string): string {
+  // "payment.created" -> "Payment created" — every action string in
+  // the backend follows this "resource.verb" convention (see
+  // AuditService's RecordAuditLogParams comment), so this is a safe,
+  // general transform rather than a hardcoded lookup table that could
+  // drift from new actions added later.
+  const [, verb] = action.split('.');
+  const words = (verb ?? action).split('_').join(' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function AuditLogTab({ schoolId, canView }: { schoolId: string | null; canView: boolean }) {
+  const [page, setPage] = React.useState(1);
+  const [entityType, setEntityType] = React.useState<string>('all');
+
+  const logsQuery = useAuditLogs(schoolId, {
+    page,
+    limit: 25,
+    entityType: entityType !== 'all' ? entityType : undefined,
+  });
+
+  if (!canView) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <EmptyState
+            icon={<ScrollText className="h-5 w-5" />}
+            title="No access to the audit log"
+            description="Ask a school owner to grant you the audit log permission if you need to see this."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <div>
-          <CardTitle>Subscription</CardTitle>
-          <p className="mt-1 text-[13px] text-navy-400">Your school's current billing plan and status.</p>
+          <CardTitle>Audit Log</CardTitle>
+          <p className="mt-1 text-[13px] text-navy-400">
+            A record of sensitive actions taken across your school — payments, roles, staff, and fees.
+          </p>
         </div>
-        <SubscriptionStatusBadge status={subscription.status} />
+        <Select
+          value={entityType}
+          onValueChange={(value) => {
+            setEntityType(value);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All activity" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All activity</SelectItem>
+            {ENTITY_TYPE_OPTIONS.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
-      <CardContent>
-        {hasPlan && subscription.plan ? (
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <p className="text-[12px] text-navy-400">Plan</p>
-                <p className="mt-1 text-[15px] font-semibold text-navy-900">{subscription.plan.name}</p>
-              </div>
-              <div>
-                <p className="text-[12px] text-navy-400">Price</p>
-                <p className="mt-1 text-[15px] font-semibold text-navy-900">
-                  {formatKobo(subscription.plan.priceKobo)}
-                  <span className="text-[12px] font-normal text-navy-400">
-                    {' '}
-                    / {subscription.plan.billingCycle === 'ANNUAL' ? 'year' : 'month'}
-                  </span>
-                </p>
-              </div>
-              <div>
-                <p className="text-[12px] text-navy-400">Renews</p>
-                <p className="mt-1 text-[15px] font-semibold text-navy-900">
-                  {subscription.cancelAtPeriodEnd ? 'Not renewing' : formatDate(subscription.currentPeriodEnd)}
-                </p>
-              </div>
-            </div>
-            {subscription.status === 'PAST_DUE' && (
-              <p className="rounded-md bg-warning-bg px-3 py-2 text-[13px] text-warning">
-                Your last payment didn't go through. Please update your payment method to avoid interruption.
-              </p>
-            )}
-            {subscription.cancelAtPeriodEnd && (
-              <p className="rounded-md bg-info-bg px-3 py-2 text-[13px] text-info">
-                Your subscription is set to end on {formatDate(subscription.currentPeriodEnd)} and won't renew.
-              </p>
-            )}
+      <CardContent className="p-0">
+        {logsQuery.isLoading ? (
+          <div className="space-y-2 p-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
           </div>
+        ) : logsQuery.isError ? (
+          <div className="p-6">
+            <ErrorState error={logsQuery.error} onRetry={() => logsQuery.refetch()} />
+          </div>
+        ) : logsQuery.data && logsQuery.data.items.length > 0 ? (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>When</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Entity</TableHead>
+                  <TableHead>Staff</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logsQuery.data.items.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-navy-500">{formatDateTime(log.createdAt)}</TableCell>
+                    <TableCell className="font-medium text-navy-900">{humanizeAction(log.action)}</TableCell>
+                    <TableCell className="text-navy-500">{log.entityType}</TableCell>
+                    <TableCell className="text-navy-500">{log.user?.fullName ?? 'System'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="px-6 pb-2">
+              <Pagination
+                page={logsQuery.data.page}
+                totalPages={logsQuery.data.totalPages}
+                total={logsQuery.data.total}
+                limit={logsQuery.data.limit}
+                onPageChange={setPage}
+              />
+            </div>
+          </>
         ) : (
-          <EmptyState
-            icon={<CreditCard className="h-5 w-5" />}
-            title={subscription.status === 'TRIALING' ? "You're on a trial" : 'No active plan'}
-            description={
-              canManage
-                ? "Plan selection isn't self-serve in the app yet. Reach out to the EduVault team to choose a plan for your school."
-                : 'Ask a school owner to set up billing for your school.'
-            }
-          />
+          <div className="p-6">
+            <EmptyState
+              icon={<ScrollText className="h-5 w-5" />}
+              title="No activity yet"
+              description="Sensitive actions like payments, role changes, and fee updates will show up here as they happen."
+            />
+          </div>
         )}
       </CardContent>
     </Card>

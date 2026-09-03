@@ -1,6 +1,6 @@
-import { apiClient } from '@/lib/api-client';
+import { apiClient, downloadBlob } from '@/lib/api-client';
 import type { PaginatedResult } from '@/types/api';
-import type { Student, StudentBalance, StudentStatus } from '@/types/entities';
+import type { BulkImportResult, Student, StudentBalance, StudentStatus } from '@/types/entities';
 
 export interface QueryStudentsParams {
   page?: number;
@@ -54,4 +54,22 @@ export const studentsApi = {
       schoolId,
       query: { termId },
     }),
+
+  // Downloads the backend's own CSV template (correct headers/example
+  // row) rather than the frontend generating one, so it can never drift
+  // from what StudentFileParser actually accepts.
+  downloadImportTemplate: async (schoolId: string) => {
+    const { blob, filename } = await apiClient.blob('/students/bulk-import/template', { schoolId });
+    downloadBlob(blob, filename || 'student-import-template.csv');
+  },
+
+  // Multipart upload — classId + file. Every imported row is assigned
+  // to this one class (see BulkImportStudentsDto); a file with students
+  // for different classes needs one upload per class.
+  bulkImport: (schoolId: string, classId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('classId', classId);
+    formData.append('file', file);
+    return apiClient.post<BulkImportResult>('/students/bulk-import', formData, { schoolId });
+  },
 };

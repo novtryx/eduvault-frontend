@@ -60,3 +60,21 @@ export function useArchiveStudent(schoolId: string | null) {
     },
   });
 }
+export function useDownloadImportTemplate(schoolId: string | null) {
+  return useMutation({
+    mutationFn: () => studentsApi.downloadImportTemplate(schoolId as string),
+  });
+}
+
+export function useBulkImportStudents(schoolId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ classId, file }: { classId: string; file: File }) =>
+      studentsApi.bulkImport(schoolId as string, classId, file),
+    onSuccess: () => {
+      // Even partial success means new students/balances now exist.
+      queryClient.invalidateQueries({ queryKey: ['students', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['classes', schoolId] });
+    },
+  });
+}

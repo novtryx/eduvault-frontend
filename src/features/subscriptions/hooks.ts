@@ -1,7 +1,17 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { billingApi, subscriptionApi } from './api';
+import { billingApi, plansApi, subscriptionApi } from './api';
+
+export function usePlans() {
+  return useQuery({
+    queryKey: ['plans'],
+    queryFn: () => plansApi.list(),
+    // Public catalog data — safe to treat as effectively static within
+    // a session rather than refetching on every focus.
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export function useSubscription(schoolId: string | null) {
   return useQuery({

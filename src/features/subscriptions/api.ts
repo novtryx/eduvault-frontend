@@ -1,12 +1,11 @@
 import { apiClient } from '@/lib/api-client';
-import type { Subscription } from '@/types/entities';
+import type { PublicPlan, Subscription } from '@/types/entities';
 
 // Mirrors SubscriptionsController — GET/POST live under
-// /schools/:schoolId/subscription. There is currently no endpoint to
-// list available Plans (no GET /plans anywhere in the backend), so this
-// layer can only report the school's CURRENT subscription; it can't yet
-// power a "choose a plan" screen. See features/subscriptions/hooks.ts
-// for how the UI degrades gracefully in that case.
+// /schools/:schoolId/subscription. Plan selection is powered by the
+// public GET /plans endpoint below (plansApi) — see the Settings
+// Subscription tab for how initialize()'s authorizationUrl is used to
+// send the Owner to Paystack checkout.
 export const subscriptionApi = {
   getCurrent: (schoolId: string) => apiClient.get<Subscription>('/subscription', { schoolId }),
 
@@ -24,4 +23,11 @@ export const subscriptionApi = {
 export const billingApi = {
   verifyCallback: (reference: string) =>
     apiClient.get<Subscription>('/billing/callback', { query: { reference } }),
+};
+
+// Public — GET /plans, no schoolId. Same catalog data a prospective
+// school sees on a pricing page before registering; also used
+// post-login for an Owner's upgrade screen.
+export const plansApi = {
+  list: () => apiClient.get<PublicPlan[]>('/plans'),
 };

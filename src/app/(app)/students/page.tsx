@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, Upload, Users } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -18,6 +18,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { useClasses } from '@/features/classes/hooks';
 import { useStudents } from '@/features/students/hooks';
 import { StudentFormDialog } from '@/features/students/student-form-dialog';
+import { BulkImportStudentsDialog } from '@/features/students/bulk-import-dialog';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { hasPermission } from '@/lib/permissions';
 
@@ -30,6 +31,7 @@ export default function StudentsPage() {
   const [classId, setClassId] = React.useState<string>('all');
   const [page, setPage] = React.useState(1);
   const [addOpen, setAddOpen] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
 
   const studentsQuery = useStudents(currentSchoolId, {
     page,
@@ -47,10 +49,16 @@ export default function StudentsPage() {
         description="Search, filter, and manage every student in your school."
         actions={
           canCreate ? (
-            <Button size="sm" onClick={() => setAddOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add Student
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4" />
+                Import
+              </Button>
+              <Button size="sm" onClick={() => setAddOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add Student
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -158,6 +166,7 @@ export default function StudentsPage() {
       </Card>
 
       <StudentFormDialog open={addOpen} onOpenChange={setAddOpen} />
+      <BulkImportStudentsDialog schoolId={currentSchoolId} open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

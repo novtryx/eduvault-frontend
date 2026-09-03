@@ -1,7 +1,7 @@
 import type { ApiEnvelope, ApiErrorShape } from '@/types/api';
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'https://eduvault-backend-sigma.vercel.app/api/v1';
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:5000/api/v1';
 
 /**
  * Thrown for every non-2xx response. `status` lets callers branch on
@@ -85,6 +85,10 @@ async function tryRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, query, schoolId, signal, skipAuthRetry } = options;
   const fullPath = schoolId ? `/schools/${schoolId}${path}` : path;
@@ -95,8 +99,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     res = await fetch(url, {
       method,
       credentials: 'include',
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      // FormData (multipart file uploads) must NOT get a manual
+      // Content-Type — the browser sets one with the correct boundary
+      // itself. Only JSON bodies get stringified + the JSON header.
+      headers: body !== undefined && !isFormData(body) ? { 'Content-Type': 'application/json' } : undefined,
+      body: body !== undefined ? (isFormData(body) ? body : JSON.stringify(body)) : undefined,
       signal,
     });
   } catch (networkError) {

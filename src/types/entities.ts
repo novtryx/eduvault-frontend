@@ -265,3 +265,55 @@ export interface Subscription {
   createdAt: string;
   updatedAt: string;
 }
+
+// Shape returned by the PUBLIC GET /plans endpoint — deliberately
+// narrower than Plan (see PlansService.PublicPlan on the backend): no
+// isActive, paystackPlanCode, or timestamps, since this is public
+// pricing-page data. GET /subscription's embedded `plan` field is the
+// full Plan entity instead — keep these two distinct rather than
+// reusing one type for both.
+export interface PublicPlan {
+  id: string;
+  key: string;
+  familyKey: string;
+  name: string;
+  billingCycle: PlanBillingCycle;
+  priceKobo: number;
+  comparePriceKobo: number | null;
+  studentLimit: number | null;
+  features: string[];
+  sortOrder: number;
+}
+
+// Matches AuditLog entity + its eager-loaded `user` relation
+// (AuditService.findAll leftJoinAndSelects it). userId/user are both
+// null for system-triggered events (e.g. a Paystack webhook expiring a
+// subscription) — never assume a human actor.
+export interface AuditLog {
+  id: string;
+  schoolId: string;
+  userId: string | null;
+  user: User | null;
+  // e.g. "payment.created", "role.deleted" — see AuditService's ACTIONS
+  // convention. Free-text on the backend, not an enum, so keep this a
+  // plain string rather than a closed union that could drift.
+  action: string;
+  // e.g. "Payment", "Role"
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface BulkImportRowFailure {
+  row: number;
+  fullName?: string;
+  admissionNumber?: string;
+  reason: string;
+}
+
+export interface BulkImportResult {
+  totalRows: number;
+  imported: number;
+  failed: BulkImportRowFailure[];
+}
