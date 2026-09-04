@@ -12,7 +12,15 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn('inline-flex items-center gap-1 rounded-lg bg-navy-50 p-1', className)}
+    className={cn(
+      // overflow-x-auto lets a wide set of triggers (e.g. Settings' 5
+      // tabs) scroll horizontally on narrow viewports instead of
+      // wrapping or overflowing the page — scrollbar hidden since a
+      // segmented control scrolling under-the-hood reads better than a
+      // visible scrollbar here.
+      'inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-navy-50 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+      className,
+    )}
     {...props}
   />
 ));

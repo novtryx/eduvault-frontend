@@ -85,7 +85,7 @@ export function PlanPicker({ schoolId, currentPlanId }: PlanPickerProps) {
         </TabsList>
       </Tabs>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {families.map(({ monthly, annual }) => {
           const plan = cycle === 'ANNUAL' ? (annual ?? monthly) : (monthly ?? annual);
           if (!plan) return null;

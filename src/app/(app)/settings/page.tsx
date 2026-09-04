@@ -206,7 +206,7 @@ function SchoolInfoTab({ schoolId, canManage }: { schoolId: string | null; canMa
 
           {canManage && (
             <div className="flex justify-end pt-2">
-              <Button type="submit" loading={isSubmitting} disabled={!isDirty}>
+              <Button type="submit" className="w-full sm:w-auto" loading={isSubmitting} disabled={!isDirty}>
                 Save changes
               </Button>
             </div>
@@ -316,7 +316,7 @@ function ReceiptSettingsTab({ schoolId, canManage }: { schoolId: string | null; 
 
           {canManage && (
             <div className="flex justify-end pt-2">
-              <Button type="submit" loading={isSubmitting} disabled={!isDirty}>
+              <Button type="submit" className="w-full sm:w-auto" loading={isSubmitting} disabled={!isDirty}>
                 Save changes
               </Button>
             </div>
@@ -366,7 +366,7 @@ function AcademicSessionsTab({ schoolId, canManage }: { schoolId: string | null;
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>Academic Sessions</CardTitle>
           <p className="mt-1 text-[13px] text-navy-400">
@@ -374,7 +374,7 @@ function AcademicSessionsTab({ schoolId, canManage }: { schoolId: string | null;
           </p>
         </div>
         {canManage && (
-          <Button size="sm" onClick={() => setSessionDialogOpen(true)}>
+          <Button size="sm" className="w-full sm:w-auto" onClick={() => setSessionDialogOpen(true)}>
             <Plus className="h-4 w-4" />
             New Session
           </Button>
@@ -394,8 +394,8 @@ function AcademicSessionsTab({ schoolId, canManage }: { schoolId: string | null;
             {sessionsQuery.data.map((session, idx) => (
               <div key={session.id}>
                 {idx > 0 && <Separator className="mb-5" />}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[14px] font-medium text-navy-900">{session.name}</p>
                     {session.isCurrent && <Badge variant="success">Current</Badge>}
                     {(session.startDate || session.endDate) && (
@@ -526,7 +526,7 @@ function SubscriptionTab({ schoolId, canManage }: { schoolId: string | null; can
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
+        <CardHeader className="flex-row items-start justify-between gap-3">
           <div>
             <CardTitle>Subscription</CardTitle>
             <p className="mt-1 text-[13px] text-navy-400">Your school's current billing plan and status.</p>
@@ -652,7 +652,7 @@ function AuditLogTab({ schoolId, canView }: { schoolId: string | null; canView: 
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>Audit Log</CardTitle>
           <p className="mt-1 text-[13px] text-navy-400">
@@ -666,7 +666,7 @@ function AuditLogTab({ schoolId, canView }: { schoolId: string | null; canView: 
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All activity" />
           </SelectTrigger>
           <SelectContent>
@@ -712,7 +712,7 @@ function AuditLogTab({ schoolId, canView }: { schoolId: string | null; canView: 
                 ))}
               </TableBody>
             </Table>
-            <div className="px-6 pb-2">
+            <div className="pb-2">
               <Pagination
                 page={logsQuery.data.page}
                 totalPages={logsQuery.data.totalPages}

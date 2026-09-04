@@ -16,7 +16,7 @@ export function Pagination({ page, totalPages, total, limit, onPageChange }: Pag
   const end = Math.min(page * limit, total);
 
   return (
-    <div className="flex items-center justify-between border-t border-border px-6 py-3.5">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3.5 sm:px-6">
       <p className="text-[12.5px] text-navy-400">
         Showing <span className="font-medium text-navy-700">{start}</span>–
         <span className="font-medium text-navy-700">{end}</span> of{' '}
