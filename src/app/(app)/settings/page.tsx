@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { SubscriptionStatusBadge } from '@/components/shared/subscription-status-badge';
+import { ImageUpload } from '@/components/shared/image-upload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -108,8 +109,12 @@ function SchoolInfoTab({ schoolId, canManage }: { schoolId: string | null; canMa
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<SchoolInfoFormValues>({ resolver: zodResolver(schoolInfoSchema) });
+
+  const logoUrl = watch('logoUrl');
 
   React.useEffect(() => {
     if (!schoolQuery.data) return;
@@ -169,12 +174,15 @@ function SchoolInfoTab({ schoolId, canManage }: { schoolId: string | null; canMa
               {errors.name && <p className="text-[12.5px] text-danger">{errors.name.message}</p>}
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="logoUrl">Logo URL</Label>
-              <Input id="logoUrl" placeholder="https://…" disabled={!canManage} {...register('logoUrl')} />
+              <Label>School logo</Label>
+              <ImageUpload
+                value={logoUrl}
+                onChange={(url) => setValue('logoUrl', url, { shouldDirty: true, shouldValidate: true })}
+                folder="/eduvault/school-logos"
+                disabled={!canManage}
+                label="Upload logo"
+              />
               {errors.logoUrl && <p className="text-[12.5px] text-danger">{errors.logoUrl.message}</p>}
-              <p className="text-[12px] text-navy-400">
-                Paste a hosted image URL — direct logo upload isn't supported yet.
-              </p>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="address">Address</Label>
