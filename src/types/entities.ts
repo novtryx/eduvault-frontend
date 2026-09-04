@@ -91,6 +91,14 @@ export interface Student {
   updatedAt: string;
 }
 
+export interface FeeStructureComponent {
+  id: string;
+  feeStructureId: string;
+  label: string;
+  amountKobo: number;
+  sortOrder: number;
+}
+
 export interface FeeStructure {
   id: string;
   schoolId: string;
@@ -100,12 +108,20 @@ export interface FeeStructure {
   term?: Term;
   classId: string;
   class?: SchoolClass;
+  // Always the flat total — for a components-based structure this is
+  // the SUM of components, kept in sync server-side so every other
+  // part of the app (balances, reports, receipts) can keep reading
+  // just amountKobo without knowing which mode a class is in.
   amountKobo: number;
+  // null/[] for a flat-amount fee structure; a non-empty, sortOrder-ed
+  // list for an itemized one — see FeesService.resolveAmountKobo's
+  // "exactly one of amountKobo or components" rule on the backend.
+  components: FeeStructureComponent[] | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'POS';
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'POS' | 'ONLINE';
 export type PaymentStatus = 'ACTIVE' | 'REVERSED';
 
 export interface Payment {
@@ -127,8 +143,10 @@ export interface Payment {
   reversalReason: string | null;
   reversedAt: string | null;
   reversedByUserId: string | null;
-  recordedByUserId: string;
-  recordedByUser?: User;
+  // Nullable specifically for ONLINE payments — a parent paying via a
+  // FeePaymentLink has no staff member behind the payment.
+  recordedByUserId: string | null;
+  recordedByUser?: User | null;
   createdAt: string;
   updatedAt: string;
   receipt?: Receipt;
@@ -316,4 +334,58 @@ export interface BulkImportResult {
   totalRows: number;
   imported: number;
   failed: BulkImportRowFailure[];
+}
+export interface PaymentSettings {
+  bankCode: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+  paystackSubaccountCode: string | null;
+  // Derived server-side as !!paystackSubaccountCode — the ONE thing
+  // that gates whether "Send Payment Link" can be used at all (see
+  // FeePaymentsService, which refuses to generate a link until a
+  // school's subaccount exists).
+  isReadyToReceiveOnlinePayments: boolean;
+}
+
+export interface PaystackBank {
+  name: string;
+  code: string;
+  slug: string;
+}
+
+// Note: there is no endpoint to list previously-sent payment links for
+// a student — sendPaymentLink() only returns {sentTo, expiresAt} as a
+// fire-and-forget confirmation, and the raw token is never returned to
+// staff (only its hash is stored — see FeePaymentLink.tokenHash on the
+// backend). So there's deliberately no "FeePaymentLink" entity type
+// here to list/display; SendPaymentLinkResult below is the only shape
+// this feature needs on the staff side.
+export interface SendPaymentLinkResult {
+  sentTo: string;
+  expiresAt: string;
+}
+
+export interface FeePaymentLinkComponent {
+  label: string;
+  amountKobo: number;
+}
+
+// Shape returned by the PUBLIC GET /public/fee-payments/:token endpoint
+// — everything a parent needs to see before paying, no auth. Mirrors
+// FeePaymentsService.getPublicInvoice() exactly, including the
+// surcharge (always added on top of the outstanding balance for an
+// online payment) and totalPayableKobo being 0 once already paid.
+export interface PublicFeeInvoice {
+  schoolName: string;
+  studentName: string;
+  className: string;
+  termName: string;
+  academicSessionName: string;
+  components: FeePaymentLinkComponent[];
+  expectedFeeKobo: number;
+  totalPaidKobo: number;
+  outstandingKobo: number;
+  surchargeKobo: number;
+  totalPayableKobo: number;
+  status: 'PENDING' | 'PAID' | 'EXPIRED';
 }

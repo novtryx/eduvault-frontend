@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, PenLine, Plus, Receipt as ReceiptIcon, Undo2 } from 'lucide-react';
+import { ArrowLeft, MessageCircle, PenLine, Plus, Receipt as ReceiptIcon, Send, Undo2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { StudentStatusBadge } from '@/components/shared/student-status-badge';
 import { CurrencyDisplay } from '@/components/shared/currency-display';
@@ -23,6 +23,7 @@ import { usePayments } from '@/features/payments/hooks';
 import { StudentFormDialog } from '@/features/students/student-form-dialog';
 import { WhatsAppReminderDialog } from '@/features/payments/whatsapp-reminder-dialog';
 import { ReversePaymentDialog } from '@/features/payments/reverse-payment-dialog';
+import { SendPaymentLinkDialog } from '@/features/fee-payment-links/send-payment-link-dialog';
 import { formatDate } from '@/lib/format-date';
 import { hasPermission } from '@/lib/permissions';
 import type { Payment } from '@/types/entities';
@@ -38,6 +39,7 @@ export default function StudentProfilePage() {
   const [termId, setTermId] = React.useState<string | undefined>(undefined);
   const [editOpen, setEditOpen] = React.useState(false);
   const [reminderOpen, setReminderOpen] = React.useState(false);
+  const [paymentLinkOpen, setPaymentLinkOpen] = React.useState(false);
   const [reversingPayment, setReversingPayment] = React.useState<Payment | null>(null);
 
   React.useEffect(() => {
@@ -46,6 +48,12 @@ export default function StudentProfilePage() {
     const currentTerm = currentSession?.terms?.find((t) => t.isCurrent) ?? currentSession?.terms?.[0];
     if (currentTerm) setTermId(currentTerm.id);
   }, [sessionsQuery.data, termId]);
+
+  // Same derivation as the Fee Structure page — the term picker only
+  // stores termId, so the containing session (needed by
+  // SendPaymentLinkDto.academicSessionId) is looked up from it.
+  const activeSession = sessionsQuery.data?.find((s) => s.terms?.some((t) => t.id === termId));
+  const activeTerm = activeSession?.terms?.find((t) => t.id === termId);
 
   const balanceQuery = useStudentBalance(currentSchoolId, params.studentId, termId);
   const paymentsQuery = usePayments(currentSchoolId, {
@@ -168,6 +176,12 @@ export default function StudentProfilePage() {
                   <MessageCircle className="h-3.5 w-3.5" />
                   Send Reminder
                 </Button>
+                {canRecordPayment && (
+                  <Button variant="secondary" size="sm" onClick={() => setPaymentLinkOpen(true)}>
+                    <Send className="h-3.5 w-3.5" />
+                    Send Payment Link
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -282,6 +296,17 @@ export default function StudentProfilePage() {
         open={Boolean(reversingPayment)}
         onOpenChange={(open) => !open && setReversingPayment(null)}
       />
+      {activeSession && activeTerm && (
+        <SendPaymentLinkDialog
+          schoolId={currentSchoolId}
+          student={student}
+          academicSessionId={activeSession.id}
+          termId={activeTerm.id}
+          termName={`${activeSession.name} · ${activeTerm.name}`}
+          open={paymentLinkOpen}
+          onOpenChange={setPaymentLinkOpen}
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ const labels: Record<PaymentMethod, string> = {
   CASH: 'Cash',
   BANK_TRANSFER: 'Bank Transfer',
   POS: 'POS',
+  ONLINE: 'Online',
 };
 
 export function PaymentMethodBadge({ method }: { method: PaymentMethod }) {

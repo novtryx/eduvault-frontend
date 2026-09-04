@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Calendar, CreditCard, Plus, ScrollText } from 'lucide-react';
+import { Calendar, CreditCard, Landmark, Plus, ScrollText, ShieldCheck } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -41,6 +41,9 @@ import {
 import { useSubscription } from '@/features/subscriptions/hooks';
 import { PlanPicker } from '@/features/subscriptions/plan-picker';
 import { useAuditLogs } from '@/features/audit/hooks';
+import { useBanks, usePaymentSettings, useSaveBankAccount } from '@/features/payment-settings/hooks';
+import { BankCombobox } from '@/features/payment-settings/bank-combobox';
+import { bankAccountSchema, type BankAccountFormValues } from '@/features/payment-settings/schemas';
 import { ApiError } from '@/lib/api-client';
 import { hasPermission } from '@/lib/permissions';
 import { formatDate, formatDateTime } from '@/lib/format-date';
@@ -69,6 +72,7 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="school">School</TabsTrigger>
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
+          <TabsTrigger value="payment-settings">Payment Settings</TabsTrigger>
           <TabsTrigger value="academic">Academic Sessions</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
@@ -80,6 +84,10 @@ export default function SettingsPage() {
 
         <TabsContent value="receipts">
           <ReceiptSettingsTab schoolId={currentSchoolId} canManage={canManageSchool} />
+        </TabsContent>
+
+        <TabsContent value="payment-settings">
+          <PaymentSettingsTab schoolId={currentSchoolId} canManage={canManageBilling} />
         </TabsContent>
 
         <TabsContent value="academic">
@@ -594,6 +602,152 @@ function SubscriptionTab({ schoolId, canManage }: { schoolId: string | null; can
         </Card>
       )}
     </div>
+  );
+}
+
+// ── Payment Settings ────────────────────────────────────────────────
+//
+// One-time setup: connecting a bank account creates a Paystack
+// Subaccount, which every parent online payment (see the "Send Payment
+// Link" flow on a student's profile) is split into automatically —
+// see SchoolsService.saveBankAccount and FeePaymentsService.
+// isReadyToReceiveOnlinePayments gates whether that feature can be used
+// at all elsewhere in the app.
+
+function PaymentSettingsTab({ schoolId, canManage }: { schoolId: string | null; canManage: boolean }) {
+  const { toast } = useToast();
+  const settingsQuery = usePaymentSettings(schoolId);
+  const saveMutation = useSaveBankAccount(schoolId);
+  const [editing, setEditing] = React.useState(false);
+  const banksQuery = useBanks(schoolId, editing);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<BankAccountFormValues>({
+    resolver: zodResolver(bankAccountSchema),
+    defaultValues: { bankCode: '', accountNumber: '' },
+  });
+
+  async function onSubmit(values: BankAccountFormValues) {
+    try {
+      await saveMutation.mutateAsync(values);
+      toast({ title: 'Bank account connected', description: 'Your school can now receive online fee payments.' });
+      setEditing(false);
+      reset({ bankCode: '', accountNumber: '' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: "Couldn't connect bank account",
+        description: error instanceof ApiError ? error.message : 'Please check the details and try again.',
+      });
+    }
+  }
+
+  if (settingsQuery.isLoading) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 p-6">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (settingsQuery.isError) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <ErrorState error={settingsQuery.error} onRetry={() => settingsQuery.refetch()} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const settings = settingsQuery.data;
+  if (!settings) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Payment Settings</CardTitle>
+        <p className="mt-1 text-[13px] text-navy-400">
+          Connect a bank account so parents can pay fees online — required before you can send a payment link
+          from a student's profile.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {settings.isReadyToReceiveOnlinePayments && !editing ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-md border border-border bg-surface-muted px-4 py-3">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+              <div>
+                <p className="text-[13.5px] font-medium text-navy-900">Ready to receive online payments</p>
+                <p className="mt-1 text-[13px] text-navy-500">
+                  {settings.bankAccountName} · ••••{settings.bankAccountNumber?.slice(-4)}
+                </p>
+              </div>
+            </div>
+            {canManage && (
+              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+                Change bank account
+              </Button>
+            )}
+          </div>
+        ) : !canManage ? (
+          <EmptyState
+            icon={<Landmark className="h-5 w-5" />}
+            title="Not connected yet"
+            description="Ask a school owner to connect a bank account to enable online fee payments."
+          />
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
+            {settings.isReadyToReceiveOnlinePayments && (
+              <p className="text-[12.5px] text-navy-400">
+                Connecting a new account replaces the current one for future payment links — links already sent
+                to parents are unaffected.
+              </p>
+            )}
+            <div className="space-y-1.5">
+              <Label>Bank</Label>
+              <BankCombobox
+                banks={banksQuery.data ?? []}
+                isLoading={banksQuery.isLoading}
+                value={watch('bankCode')}
+                onChange={(code) => setValue('bankCode', code, { shouldValidate: true })}
+              />
+              {errors.bankCode && <p className="text-[12.5px] text-danger">{errors.bankCode.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="accountNumber">Account number</Label>
+              <Input
+                id="accountNumber"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="10-digit NUBAN account number"
+                {...register('accountNumber')}
+              />
+              {errors.accountNumber && <p className="text-[12.5px] text-danger">{errors.accountNumber.message}</p>}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              {settings.isReadyToReceiveOnlinePayments && (
+                <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit" loading={isSubmitting || saveMutation.isPending}>
+                Connect Account
+              </Button>
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

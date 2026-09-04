@@ -136,7 +136,18 @@ export default function FeeStructurePage() {
                   <TableRow key={klass.id}>
                     <TableCell className="font-medium text-navy-900">{klass.name}</TableCell>
                     <TableCell className="text-right">
-                      {fee ? <CurrencyDisplay kobo={fee.amountKobo} /> : <span className="text-navy-300">—</span>}
+                      {fee ? (
+                        <div className="flex flex-col items-end">
+                          <CurrencyDisplay kobo={fee.amountKobo} />
+                          {fee.components && fee.components.length > 0 && (
+                            <span className="text-[11.5px] text-navy-400">
+                              {fee.components.map((c) => c.label).join(' + ')}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-navy-300">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {fee ? (
