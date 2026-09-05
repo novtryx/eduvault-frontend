@@ -46,7 +46,7 @@ export default function LoginPage() {
           <Vault className="h-5 w-5" />
         </div>
         <h1 className="text-[20px] font-semibold text-navy-900">Welcome back</h1>
-        <p className="mt-1 text-[13.5px] text-navy-400">Sign in to your EduVault account</p>
+        <p className="mt-1 text-[13.5px] text-navy-400">Sign in to your Novtryx School account</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-card">

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Calendar, CreditCard, Landmark, Plus, ScrollText, ShieldCheck } from 'lucide-react';
@@ -50,8 +51,47 @@ import { formatDate, formatDateTime } from '@/lib/format-date';
 import { formatKobo } from '@/lib/currency';
 import type { School } from '@/types/entities';
 
+const VALID_TABS = ['school', 'receipts', 'payment-settings', 'academic', 'subscription', 'audit'];
+
+// useSearchParams() requires a Suspense boundary in the App Router, so
+// the actual page body lives in SettingsContent below; this default
+// export just supplies that boundary. The fallback intentionally
+// mirrors the page's own header + tab bar shape so switching tabs (or
+// arriving via a deep link like ?tab=subscription) doesn't flash an
+// unrelated loading state.
 export default function SettingsPage() {
+  return (
+    <React.Suspense fallback={<SettingsPageSkeleton />}>
+      <SettingsContent />
+    </React.Suspense>
+  );
+}
+
+function SettingsPageSkeleton() {
+  return (
+    <div className="space-y-6 pb-10">
+      <PageHeader title="Settings" description="Manage your school's information, academic structure, and billing." />
+      <Skeleton className="h-9 w-full max-w-md" />
+      <Card>
+        <CardContent className="space-y-4 p-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SettingsContent() {
   const { currentSchoolId, isOwner, permissionKeys } = useAuth();
+  const searchParams = useSearchParams();
+  // Lets other parts of the app deep-link into a specific tab, e.g. a
+  // "you've hit your plan's student limit" error linking straight to
+  // ?tab=subscription instead of dropping someone on School Info and
+  // making them find Subscription themselves.
+  const requestedTab = searchParams.get('tab');
+  const initialTab = requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'school';
 
   // Distinct backend permissions for distinct concerns — settings:update
   // gates PATCH /schools/:schoolId (name/logo/address/receipt fields),
@@ -68,7 +108,7 @@ export default function SettingsPage() {
     <div className="space-y-6 pb-10">
       <PageHeader title="Settings" description="Manage your school's information, academic structure, and billing." />
 
-      <Tabs defaultValue="school">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="school">School</TabsTrigger>
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
@@ -319,7 +359,7 @@ function ReceiptSettingsTab({ schoolId, canManage }: { schoolId: string | null; 
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="receiptSignature">Signatory name</Label>
-            <Input id="receiptSignature" placeholder="e.g. Bursar, EduVault Schools" disabled={!canManage} {...register('receiptSignature')} />
+            <Input id="receiptSignature" placeholder="e.g. Bursar, Novtryx School" disabled={!canManage} {...register('receiptSignature')} />
           </div>
 
           {canManage && (
@@ -582,9 +622,13 @@ function SubscriptionTab({ schoolId, canManage }: { schoolId: string | null; can
               icon={<CreditCard className="h-5 w-5" />}
               title={subscription.status === 'TRIALING' ? "You're on a trial" : 'No active plan'}
               description={
-                canManage
-                  ? 'Choose a plan below to get started.'
-                  : 'Ask a school owner to choose a plan for your school.'
+                subscription.status === 'TRIALING'
+                  ? canManage
+                    ? "Trials include a limited number of active students. Choose a plan below when you're ready to grow beyond that."
+                    : "Your school is on a trial with a limited number of active students. Ask a school owner to choose a plan when you're ready to grow."
+                  : canManage
+                    ? 'Choose a plan below to get started.'
+                    : 'Ask a school owner to choose a plan for your school.'
               }
             />
           )}

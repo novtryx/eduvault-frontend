@@ -23,7 +23,7 @@ export function SchoolSwitcher() {
         </div>
         <div className="min-w-0">
           <p className="truncate text-[13px] font-semibold text-navy-900">
-            {currentMembership?.schoolName ?? 'EduVault'}
+            {currentMembership?.schoolName ?? 'Novtryx School'}
           </p>
         </div>
       </div>

@@ -51,7 +51,7 @@ export default function DashboardPage() {
         <PageHeader
           title={firstName ? `Good day, ${firstName}` : 'Dashboard'}
           description={
-            currentMembership ? `Welcome to ${currentMembership.schoolName} on EduVault.` : undefined
+            currentMembership ? `Welcome to ${currentMembership.schoolName} on Novtryx School.` : undefined
           }
         />
         <EmptyState

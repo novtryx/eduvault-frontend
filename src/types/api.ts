@@ -7,7 +7,7 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
-// Every EduVault controller returns { success: true, data } on success.
+// Every Novtryx School controller returns { success: true, data } on success.
 // Nest's global exception filter (default) returns { statusCode, message,
 // error } on failure — apiClient normalizes both shapes, see api-client.ts.
 export interface ApiEnvelope<T> {

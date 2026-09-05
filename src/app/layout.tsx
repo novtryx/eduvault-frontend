@@ -10,8 +10,37 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'EduVault — School Fee Management',
-  description: 'Know exactly who has paid, who owes, and how much has been collected.',
+  metadataBase: new URL('https://school.novtryx.com'),
+  title: {
+    default: 'Novtryx School — School Fee Management for Nigerian Schools',
+    template: '%s — Novtryx School',
+  },
+  description:
+    'Know exactly who has paid, who owes, and how much has been collected. Novtryx School is a premium fee and payment management platform built for Nigerian private schools.',
+  keywords: ['school fee management', 'Nigerian schools', 'fee collection software', 'school payments Nigeria'],
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_NG',
+    siteName: 'Novtryx School',
+    title: 'Novtryx School — School Fee Management for Nigerian Schools',
+    description:
+      'Know exactly who has paid, who owes, and how much has been collected. Built for Nigerian private schools.',
+    images: ['/og-home.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Novtryx School — School Fee Management for Nigerian Schools',
+    description: 'Know exactly who has paid, who owes, and how much has been collected.',
+    images: ['/og-home.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -13,7 +13,7 @@ const config: Config = {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // ── EduVault design system ──────────────────────────────────
+        // ── Novtryx School design system ────────────────────────────
         navy: {
           DEFAULT: '#172033',
           50: '#f4f5f7',

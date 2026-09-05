@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/components/ui/use-toast';
 import { studentSchema, type StudentFormValues } from '@/features/students/schemas';
 import { useCreateStudent, useUpdateStudent } from '@/features/students/hooks';
 import { useAuth } from '@/features/auth/auth-context';
 import { useClasses } from '@/features/classes/hooks';
 import { ApiError } from '@/lib/api-client';
+import { isPlanLimitError } from '@/lib/plan-limit-error';
 import type { Student } from '@/types/entities';
 
 interface StudentFormDialogProps {
@@ -33,6 +36,7 @@ interface StudentFormDialogProps {
 export function StudentFormDialog({ open, onOpenChange, student, onSuccess }: StudentFormDialogProps) {
   const { currentSchoolId } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const classesQuery = useClasses(currentSchoolId);
   const createMutation = useCreateStudent(currentSchoolId);
   const updateMutation = useUpdateStudent(currentSchoolId, student?.id ?? '');
@@ -85,6 +89,20 @@ export function StudentFormDialog({ open, onOpenChange, student, onSuccess }: St
       onOpenChange(false);
       onSuccess?.(result);
     } catch (error) {
+      if (isPlanLimitError(error)) {
+        onOpenChange(false);
+        toast({
+          variant: 'destructive',
+          title: "Couldn't add student",
+          description: error.message,
+          action: (
+            <ToastAction altText="Upgrade plan" onClick={() => router.push('/settings?tab=subscription')}>
+              Upgrade Plan
+            </ToastAction>
+          ),
+        });
+        return;
+      }
       toast({
         variant: 'destructive',
         title: isEditing ? "Couldn't update student" : "Couldn't add student",
