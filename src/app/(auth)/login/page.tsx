@@ -57,7 +57,7 @@ export default function LoginPage() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" autoComplete="current-password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" {...register('password')} />
+          <Input id="password" type="password" autoComplete="current-password" placeholder="At least 8 characters" {...register('password')} />
           {errors.password && <p className="text-[12.5px] text-danger">{errors.password.message}</p>}
         </div>
         <Button type="submit" className="w-full" loading={isSubmitting}>

@@ -389,3 +389,19 @@ export interface PublicFeeInvoice {
   totalPayableKobo: number;
   status: 'PENDING' | 'PAID' | 'EXPIRED';
 }
+
+export interface BulkFeeActionSkip {
+  studentId: string;
+  fullName: string;
+  // Free text on the backend ("No parent email on file", "No
+  // outstanding balance") — kept as a plain string rather than a
+  // closed union so a new skip reason added later doesn't need a type
+  // change here to display correctly.
+  reason: string;
+}
+
+export interface BulkFeeActionResult {
+  totalStudentsChecked: number;
+  sent: number;
+  skipped: BulkFeeActionSkip[];
+}

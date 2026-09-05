@@ -14,7 +14,7 @@ import { useSchool } from '@/features/schools/hooks';
 import { formatDate, formatDateTime } from '@/lib/format-date';
 import { formatKobo } from '@/lib/currency';
 
-export default function ReceiptPage() {
+function ReceiptPageContent() {
   const params = useParams<{ paymentId: string }>();
   const router = useRouter();
   const { currentSchoolId } = useAuth();
@@ -36,7 +36,12 @@ export default function ReceiptPage() {
     studentId: payment?.studentId,
     termId: payment?.termId,
     status: 'ACTIVE',
-    limit: 200,
+    // Backend caps limit at 100 (QueryPaymentsDto) — 200 here silently
+    // 400'd every request, which meant Previous/Remaining Balance never
+    // rendered for ANY receipt, not just students with 100+ payments in
+    // a single term (an edge case that would need real pagination here
+    // instead, but isn't what was actually breaking this).
+    limit: 100,
   });
 
   const isLoading = paymentQuery.isLoading || receiptQuery.isLoading || schoolQuery.isLoading;
@@ -169,7 +174,13 @@ export default function ReceiptPage() {
           <div className="space-y-3 py-6 text-[13.5px]">
             <div className="flex items-center justify-between">
               <span className="text-navy-500">Previous Balance</span>
-              <span className="font-medium text-navy-900">{formatKobo(balances?.previousBalanceKobo)}</span>
+              <span className="font-medium text-navy-900">
+                {payment.expectedFeeKoboSnapshot === null ? (
+                  <span className="text-navy-300">No fee set</span>
+                ) : (
+                  formatKobo(balances?.previousBalanceKobo)
+                )}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-navy-500">Amount Paid</span>
@@ -178,7 +189,13 @@ export default function ReceiptPage() {
             <div className="flex items-center justify-between">
               <span className="text-navy-500">Payment Method</span>
               <span className="font-medium text-navy-900">
-                {payment.method === 'BANK_TRANSFER' ? 'Bank Transfer' : payment.method === 'POS' ? 'POS' : 'Cash'}
+                {payment.method === 'BANK_TRANSFER'
+                  ? 'Bank Transfer'
+                  : payment.method === 'POS'
+                    ? 'POS'
+                    : payment.method === 'ONLINE'
+                      ? 'Online'
+                      : 'Cash'}
               </span>
             </div>
             {payment.reference && (
@@ -191,7 +208,11 @@ export default function ReceiptPage() {
             <div className="flex items-center justify-between pt-1">
               <span className="text-[14.5px] font-medium text-navy-900">Remaining Balance</span>
               <span className="text-[18px] font-semibold text-navy-900">
-                {formatKobo(balances?.remainingBalanceKobo)}
+                {payment.expectedFeeKoboSnapshot === null ? (
+                  <span className="text-[13.5px] font-normal text-navy-300">No fee set for this term</span>
+                ) : (
+                  formatKobo(balances?.remainingBalanceKobo)
+                )}
               </span>
             </div>
           </div>
@@ -213,5 +234,20 @@ export default function ReceiptPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ReceiptPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="mx-auto max-w-2xl space-y-4 pb-10 pt-4">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-[600px] w-full rounded-xl" />
+        </div>
+      }
+    >
+      <ReceiptPageContent />
+    </React.Suspense>
   );
 }

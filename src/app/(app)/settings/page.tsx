@@ -619,7 +619,14 @@ function PaymentSettingsTab({ schoolId, canManage }: { schoolId: string | null; 
   const settingsQuery = usePaymentSettings(schoolId);
   const saveMutation = useSaveBankAccount(schoolId);
   const [editing, setEditing] = React.useState(false);
-  const banksQuery = useBanks(schoolId, editing);
+  // The bank-picking form renders whenever there's no account connected
+  // yet OR the person explicitly clicked "Change bank account" — the
+  // bank list needs to be fetched in both cases, not just the latter.
+  // (Bug fix: previously this only fired on `editing`, so a school
+  // setting up payments for the first time saw an empty dropdown since
+  // `editing` never becomes true on that path.)
+  const showForm = !settingsQuery.data?.isReadyToReceiveOnlinePayments || editing;
+  const banksQuery = useBanks(schoolId, showForm);
 
   const {
     register,
@@ -682,7 +689,7 @@ function PaymentSettingsTab({ schoolId, canManage }: { schoolId: string | null; 
         </p>
       </CardHeader>
       <CardContent>
-        {settings.isReadyToReceiveOnlinePayments && !editing ? (
+        {settings.isReadyToReceiveOnlinePayments && !showForm ? (
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-border bg-surface-muted px-4 py-3">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
@@ -767,6 +774,7 @@ const ENTITY_TYPE_OPTIONS = [
   'StaffInvite',
   'UserSchoolRole',
   'Subscription',
+  'Term',
 ];
 
 function humanizeAction(action: string): string {

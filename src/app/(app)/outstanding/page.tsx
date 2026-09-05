@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { AlertCircle, MessageCircle, Plus, Users } from 'lucide-react';
+import { AlertCircle, MessageCircle, Plus, Send, Users } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -23,6 +23,7 @@ import { useStudent } from '@/features/students/hooks';
 import { useDashboardSummary } from '@/features/dashboard/hooks';
 import { useOutstandingReport } from '@/features/reports/hooks';
 import { WhatsAppReminderDialog } from '@/features/payments/whatsapp-reminder-dialog';
+import { SendBulkFeeRemindersDialog } from '@/features/fee-reminders/send-bulk-reminders-dialog';
 import { hasPermission } from '@/lib/permissions';
 
 const PAGE_SIZE = 15;
@@ -36,6 +37,7 @@ export default function OutstandingPage() {
   const [classId, setClassId] = React.useState<string>('all');
   const [page, setPage] = React.useState(1);
   const [reminderStudentId, setReminderStudentId] = React.useState<string | null>(null);
+  const [bulkRemindersOpen, setBulkRemindersOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (termId || !sessionsQuery.data) return;
@@ -43,6 +45,14 @@ export default function OutstandingPage() {
     const currentTerm = currentSession?.terms?.find((t) => t.isCurrent) ?? currentSession?.terms?.[0];
     if (currentTerm) setTermId(currentTerm.id);
   }, [sessionsQuery.data, termId]);
+
+  // Same derivation used on the Fee Structure and Student Profile pages
+  // — the term picker only stores termId, so the containing session
+  // (needed by SendFeeRemindersDto.academicSessionId) is looked up
+  // from it.
+  const activeSession = sessionsQuery.data?.find((s) => s.terms?.some((t) => t.id === termId));
+  const activeTerm = activeSession?.terms?.find((t) => t.id === termId);
+  const selectedClass = classId !== 'all' ? classesQuery.data?.find((c) => c.id === classId) : undefined;
 
   const summaryQuery = useDashboardSummary(currentSchoolId, termId);
 
@@ -75,9 +85,17 @@ export default function OutstandingPage() {
         title="Outstanding Fees"
         description="Everyone who currently owes a balance, and how much."
         actions={
-          sessionsQuery.data && sessionsQuery.data.length > 0 ? (
-            <TermSelect sessions={sessionsQuery.data} value={termId} onChange={setTermId} className="w-[200px]" />
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {canRecordPayment && activeSession && activeTerm && (
+              <Button variant="secondary" size="sm" onClick={() => setBulkRemindersOpen(true)}>
+                <Send className="h-3.5 w-3.5" />
+                Send Reminders
+              </Button>
+            )}
+            {sessionsQuery.data && sessionsQuery.data.length > 0 && (
+              <TermSelect sessions={sessionsQuery.data} value={termId} onChange={setTermId} className="w-[200px]" />
+            )}
+          </div>
         }
       />
 
@@ -194,6 +212,18 @@ export default function OutstandingPage() {
         outstandingKobo={allRows.find((r) => r.studentId === reminderStudentId)?.outstandingKobo}
         schoolName={currentMembership?.schoolName}
       />
+      {activeSession && activeTerm && (
+        <SendBulkFeeRemindersDialog
+          schoolId={currentSchoolId}
+          academicSessionId={activeSession.id}
+          termId={activeTerm.id}
+          termName={`${activeSession.name} · ${activeTerm.name}`}
+          classId={selectedClass?.id}
+          className={selectedClass?.name}
+          open={bulkRemindersOpen}
+          onOpenChange={setBulkRemindersOpen}
+        />
+      )}
     </div>
   );
 }
