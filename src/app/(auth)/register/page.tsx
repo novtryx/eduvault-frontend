@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Vault, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { authApi } from '@/features/auth/api';
@@ -32,7 +33,7 @@ export default function RegisterPage() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Couldn\u2019t create your account',
+        title: "Couldn't create your account",
         description: error instanceof ApiError ? error.message : 'Please check your details and try again.',
       });
     }
@@ -40,15 +41,15 @@ export default function RegisterPage() {
 
   if (registered) {
     return (
-      <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+      <div className="text-center">
         <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-success-bg text-success">
           <CheckCircle2 className="h-5 w-5" />
         </div>
-        <h1 className="text-[18px] font-semibold text-navy-900">Account created</h1>
-        <p className="mt-1.5 text-[13.5px] text-navy-400">
+        <h1 className="text-[20px] font-semibold text-navy-900">Account created</h1>
+        <p className="mt-1.5 text-[14px] text-navy-400">
           Your school has been set up. Sign in to start managing fees and payments.
         </p>
-        <Button className="mt-6 w-full" onClick={() => router.push('/login')}>
+        <Button className="mt-7 w-full" size="lg" onClick={() => router.push('/login')}>
           Go to sign in
         </Button>
       </div>
@@ -57,15 +58,12 @@ export default function RegisterPage() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-navy-900 text-white">
-          <Vault className="h-5 w-5" />
-        </div>
-        <h1 className="text-[20px] font-semibold text-navy-900">Set up your school</h1>
-        <p className="mt-1 text-[13.5px] text-navy-400">Create your Novtryx School account in a minute</p>
+      <div className="mb-8">
+        <h1 className="text-[24px] font-semibold tracking-tight text-navy-900">Set up your school</h1>
+        <p className="mt-1.5 text-[14px] text-navy-400">Create your Novtryx School account in a minute</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-card">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="schoolName">School name</Label>
           <Input id="schoolName" placeholder="Bright Future Academy" {...register('schoolName')} />
@@ -83,19 +81,19 @@ export default function RegisterPage() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" placeholder="At least 8 characters" {...register('password')} />
+          <PasswordInput id="password" placeholder="At least 8 characters" {...register('password')} />
           {errors.password ? (
             <p className="text-[12.5px] text-danger">{errors.password.message}</p>
           ) : (
             <p className="text-[12px] text-navy-400">At least 8 characters, with one letter and one number.</p>
           )}
         </div>
-        <Button type="submit" className="w-full" loading={isSubmitting}>
+        <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
           Create account
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-[13px] text-navy-400">
+      <p className="mt-7 text-center text-[13.5px] text-navy-400">
         Already have an account?{' '}
         <Link href="/login" className="font-medium text-navy-900 hover:underline">
           Sign in

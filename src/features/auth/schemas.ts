@@ -33,3 +33,25 @@ export const acceptInviteSchema = z.object({
   path: ['confirmPassword'],
 });
 export type AcceptInviteFormValues = z.infer<typeof acceptInviteSchema>;
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+});
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+// Mirrors ResetPasswordDto exactly — same password rule as
+// registration/accept-invite (see ResetPasswordDto's own comment on why
+// a third, different policy here would be arbitrary).
+export const resetPasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(72, 'Password must be 72 characters or fewer')
+      .regex(/(?=.*[A-Za-z])(?=.*\d)/, 'Password must contain at least one letter and one number'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

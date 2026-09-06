@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { Vault } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { authApi } from '@/features/auth/api';
@@ -33,7 +33,7 @@ export default function LoginPage() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Couldn\u2019t sign in',
+        title: "Couldn't sign in",
         description: error instanceof ApiError ? error.message : 'Please check your details and try again.',
       });
     }
@@ -41,31 +41,38 @@ export default function LoginPage() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-navy-900 text-white">
-          <Vault className="h-5 w-5" />
-        </div>
-        <h1 className="text-[20px] font-semibold text-navy-900">Welcome back</h1>
-        <p className="mt-1 text-[13.5px] text-navy-400">Sign in to your Novtryx School account</p>
+      <div className="mb-8">
+        <h1 className="text-[24px] font-semibold tracking-tight text-navy-900">Welcome back</h1>
+        <p className="mt-1.5 text-[14px] text-navy-400">Sign in to your Novtryx School account</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-card">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" autoComplete="email" placeholder="you@school.edu.ng" {...register('email')} />
           {errors.email && <p className="text-[12.5px] text-danger">{errors.email.message}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" autoComplete="current-password" placeholder="At least 8 characters" {...register('password')} />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link href="/forgot-password" className="text-[12.5px] font-medium text-navy-500 hover:text-navy-900">
+              Forgot password?
+            </Link>
+          </div>
+          <PasswordInput
+            id="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            {...register('password')}
+          />
           {errors.password && <p className="text-[12.5px] text-danger">{errors.password.message}</p>}
         </div>
-        <Button type="submit" className="w-full" loading={isSubmitting}>
+        <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
           Sign in
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-[13px] text-navy-400">
+      <p className="mt-7 text-center text-[13.5px] text-navy-400">
         Don&apos;t have a school account?{' '}
         <Link href="/register" className="font-medium text-navy-900 hover:underline">
           Create one
